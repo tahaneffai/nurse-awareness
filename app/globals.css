@@ -60,6 +60,39 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Ensure content is always visible */
+main {
+  position: relative;
+  z-index: 10;
+}
+
+/* Ensure sections create proper stacking contexts */
+section {
+  position: relative;
+}
+
+/* Ensure animated content is visible even if animations fail */
+[data-framer-component] {
+  opacity: 1 !important;
+}
+
+/* Critical fix: Ensure Hero content is always visible */
+section#home h1,
+section#home p,
+section#home ul,
+section#home a,
+section#home button {
+  opacity: 1 !important;
+  visibility: visible !important;
+  color: #F4F5F4 !important;
+}
+
+section#home .text-off-white,
+section#home .text-soft-gray {
+  color: #F4F5F4 !important;
+  opacity: 1 !important;
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

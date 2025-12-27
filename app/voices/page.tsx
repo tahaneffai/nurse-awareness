@@ -1,74 +1,83 @@
-'use client';
+import { prisma } from '@/lib/prisma';
+import { safeDbQuery } from '@/lib/db-utils';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+import VoicesPageClient from '@/components/VoicesPageClient';
+import VoicesPageHero from '@/components/VoicesPageHero';
 
 export const dynamic = 'force-dynamic';
 
-import { motion } from 'framer-motion';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import PageHero from '@/components/PageHero';
-import { useLanguage } from '@/components/LanguageProvider';
-import Link from 'next/link';
-import { ArrowRight, Shield } from 'lucide-react';
+async function getInitialVoices() {
+  try {
+    const [voicesResult, totalResult] = await Promise.all([
+      safeDbQuery(
+        () => prisma.anonymousVoice.findMany({
+          where: {
+            status: 'APPROVED',
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 12,
+        }),
+        []
+      ),
+      safeDbQuery(
+        () => prisma.anonymousVoice.count({
+          where: {
+            status: 'APPROVED',
+          },
+        }),
+        0
+      ),
+    ]);
 
-export default function VoicesPage() {
-  const { t } = useLanguage();
+    const voices = voicesResult.data;
+    const total = totalResult.data;
+
+    return {
+      voices: voices.map((v: any) => ({
+        id: v.id,
+        message: v.message,
+        createdAt: v.createdAt.toISOString(),
+        topicTags: v.topicTags,
+      })),
+      pagination: {
+        page: 1,
+        size: 12,
+        total,
+        totalPages: Math.ceil(total / 12),
+        hasMore: 12 < total,
+      },
+      degraded: voicesResult.degraded || totalResult.degraded,
+    };
+  } catch (error) {
+    console.error('Error fetching initial voices:', error);
+    return {
+      voices: [],
+      pagination: {
+        page: 1,
+        size: 12,
+        total: 0,
+        totalPages: 0,
+        hasMore: false,
+      },
+      degraded: true,
+    };
+  }
+}
+
+export default async function VoicesPage() {
+  const initialData = await getInitialVoices();
 
   return (
     <main className="min-h-screen">
       <Navbar />
-      <PageHero title={t('voices.title')} subtitle={t('voices.intro')} />
+      <VoicesPageHero />
 
       <section className="py-12 sm:py-16 md:py-20 lg:py-32 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto space-y-8">
-          {/* Safety Rules */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="glass-strong p-8 rounded-2xl border border-gold/10"
-          >
-            <div className="flex items-center gap-3 mb-6">
-              <Shield className="w-6 h-6 text-gold" />
-              <h3 className="text-2xl font-bold text-gold">
-                {t('voices.safety.title')}
-              </h3>
-            </div>
-            <ul className="space-y-3 mb-6">
-              {(t('voices.safety.rules') as string[]).map((rule, index) => (
-                <li key={index} className="flex items-start gap-3">
-                  <span className="text-gold mt-1">•</span>
-                  <span className="text-soft-gray/90">{rule}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="text-soft-gray/80 text-sm italic">
-              {t('voices.safety.note')}
-            </p>
-          </motion.div>
-
-          {/* CTA */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="glass-strong p-8 rounded-2xl border border-gold/10 text-center"
-          >
-            <h3 className="text-2xl font-bold text-off-white mb-4">
-              {t('home.voices.encouragement.title')}
-            </h3>
-            <p className="text-soft-gray/80 mb-6">
-              {t('home.voices.encouragement.text')}
-            </p>
-            <Link
-              href="/help"
-              className="inline-flex items-center gap-2 bg-gold text-dark-green-primary px-8 py-4 rounded-2xl font-semibold hover:bg-gold/90 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-gold/30"
-            >
-              {t('voices.cta')}
-              <ArrowRight className="w-5 h-5" />
-            </Link>
-          </motion.div>
+        <div className="max-w-7xl mx-auto space-y-8">
+          <VoicesPageClient initialData={initialData} />
         </div>
       </section>
 
@@ -76,4 +85,3 @@ export default function VoicesPage() {
     </main>
   );
 }
-

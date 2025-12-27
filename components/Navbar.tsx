@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from './LanguageProvider';
 import Link from 'next/link';
@@ -72,6 +72,20 @@ export default function Navbar() {
               </button>
             </div>
 
+            {/* Admin Icon */}
+            <Link
+              href="/admin"
+              className="relative p-2 rounded-lg glass border border-gold/20 hover:border-gold/40 transition-all group"
+            >
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Shield className="w-5 h-5 text-gold group-hover:text-gold/80 transition-colors" />
+              </motion.div>
+              <span className="absolute -top-1 -right-1 w-2 h-2 bg-gold rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
+            </Link>
+
             <Link
               href="/voices"
               className="bg-gold text-dark-green-primary px-6 py-2.5 rounded-lg font-semibold hover:bg-gold/90 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-gold/20"
@@ -135,6 +149,15 @@ export default function Navbar() {
                     EN
                   </button>
                 </div>
+
+                <Link
+                  href="/admin"
+                  className="flex items-center gap-2 px-3 py-2 text-soft-gray hover:text-gold hover:bg-dark-green-2/50 rounded-lg transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <Shield className="w-4 h-4" />
+                  <span>Admin</span>
+                </Link>
 
                 <Link
                   href="/voices"

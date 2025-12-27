@@ -4,14 +4,15 @@ import { motion } from 'framer-motion';
 import { Shield, Heart, BookOpen } from 'lucide-react';
 import { useLanguage } from './LanguageProvider';
 import Link from 'next/link';
+import Particles from './Particles';
 
 export default function Hero() {
   const { t } = useLanguage();
 
   return (
-    <section id="home" className="relative min-h-screen px-4 sm:px-6 lg:px-8 overflow-hidden">
+    <section id="home" className="relative min-h-screen flex flex-col items-center justify-center pt-20 pb-12 md:pt-24 md:pb-16 lg:pt-28 lg:pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden" style={{ zIndex: 10 }}>
       {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-dark-green-very-dark via-dark-green-primary to-dark-green-2 z-0">
+      <div className="absolute inset-0 bg-gradient-to-br from-dark-green-very-dark via-dark-green-primary to-dark-green-2" style={{ zIndex: 0 }}>
         {/* Floating Blobs */}
         <motion.div
           className="absolute top-20 right-20 w-96 h-96 bg-gold/10 rounded-full blur-3xl"
@@ -54,40 +55,19 @@ export default function Hero() {
         />
       </div>
 
-      {/* Particles */}
-      <div className="absolute inset-0 z-0">
-        {[...Array(20)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-1 h-1 bg-gold/30 rounded-full"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-            }}
-            animate={{
-              y: [0, -1000],
-              x: [0, Math.random() * 200 - 100],
-              opacity: [0, 1, 0],
-            }}
-            transition={{
-              duration: 15 + Math.random() * 10,
-              repeat: Infinity,
-              delay: Math.random() * 5,
-              ease: "linear",
-            }}
-          />
-        ))}
-      </div>
+      {/* Particles - Client-only to avoid hydration mismatch */}
+      <Particles />
 
       {/* Content */}
-      <div className="relative z-20 max-w-5xl mx-auto text-center space-y-6 sm:space-y-8 md:space-y-10 lg:space-y-12 pt-20 pb-12 md:pt-24 md:pb-16 lg:pt-28 lg:pb-20 min-h-screen flex flex-col items-center justify-center">
+      <div className="relative max-w-5xl mx-auto text-center space-y-6 sm:space-y-8 md:space-y-10 lg:space-y-12 w-full flex flex-col items-center justify-center" style={{ zIndex: 30, position: 'relative' }}>
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="space-y-4 sm:space-y-5 md:space-y-6"
+          className="space-y-4 sm:space-y-5 md:space-y-6 w-full"
+          style={{ minHeight: 'auto', opacity: 1 }}
         >
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-off-white leading-[1.1] sm:leading-tight px-2">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-off-white leading-[1.1] sm:leading-tight px-2" style={{ color: '#F4F5F4', opacity: 1, visibility: 'visible' }}>
             {t('home.hero.title')}
           </h1>
           <div className="space-y-3 sm:space-y-4 text-base sm:text-lg md:text-xl lg:text-2xl text-soft-gray/90 leading-relaxed max-w-3xl mx-auto px-2">

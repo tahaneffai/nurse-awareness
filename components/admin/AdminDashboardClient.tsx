@@ -1,0 +1,274 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { Search, LogOut, RefreshCw } from 'lucide-react';
+import AdminVoiceCard from './AdminVoiceCard';
+import AdminPasswordCard from './AdminPasswordCard';
+
+type VoiceStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+interface Voice {
+  id: string;
+  message: string;
+  topicTags: string | null;
+  createdAt: string;
+  status: VoiceStatus;
+}
+
+export default function AdminDashboardClient() {
+  const router = useRouter();
+  const [voices, setVoices] = useState<Voice[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState('newest');
+  const [status, setStatus] = useState('all');
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    totalPages: 0,
+    hasMore: false,
+  });
+
+  const fetchVoices = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        size: '20',
+        sort,
+        ...(status !== 'all' && { status }),
+        ...(search && { search }),
+      });
+
+      const response = await fetch(`/api/admin/voices?${params}`);
+
+      if (response.status === 401) {
+        router.push('/admin/login');
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch voices');
+      }
+
+      const data = await response.json();
+      setVoices(data.voices);
+      setPagination(data.pagination);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchVoices();
+  }, [page, sort, status]);
+
+  const handleSearch = () => {
+    setPage(1);
+    fetchVoices();
+  };
+
+  const handleEdit = async (id: string, newMessage: string) => {
+    try {
+      const response = await fetch(`/api/admin/voices/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: newMessage }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update message');
+      }
+
+      await fetchVoices();
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const handleStatusChange = async (id: string, newStatus: VoiceStatus) => {
+    try {
+      const response = await fetch(`/api/admin/voices/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update status');
+      }
+
+      await fetchVoices();
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const response = await fetch(`/api/admin/voices/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete message');
+      }
+
+      await fetchVoices();
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const handleLogout = async () => {
+    fetch('/api/admin/logout', { method: 'POST' })
+      .then(() => {
+        router.push('/admin/login');
+        router.refresh();
+      });
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Controls */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="glass-strong p-6 rounded-2xl border border-gold/10"
+      >
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* Search */}
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gold/60" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              placeholder="Search messages..."
+              className="w-full bg-dark-green-3/50 border border-dark-green-mid rounded-lg pl-11 pr-4 py-2.5 text-off-white focus:outline-none focus:border-gold transition-colors"
+            />
+          </div>
+
+          {/* Status Filter Tabs */}
+          <div className="flex items-center gap-2 glass border border-gold/20 rounded-lg p-1">
+            {(['all', 'PENDING', 'APPROVED', 'REJECTED'] as const).map((filterStatus) => (
+              <button
+                key={filterStatus}
+                onClick={() => {
+                  setStatus(filterStatus);
+                  setPage(1);
+                }}
+                className={`px-3 py-1.5 rounded text-xs font-semibold transition-all ${
+                  status === filterStatus
+                    ? 'bg-gold text-dark-green-primary'
+                    : 'text-soft-gray hover:text-gold'
+                }`}
+              >
+                {filterStatus === 'all' ? 'All' : filterStatus}
+              </button>
+            ))}
+          </div>
+
+          <select
+            value={sort}
+            onChange={(e) => {
+              setSort(e.target.value);
+              setPage(1);
+            }}
+            className="bg-dark-green-3/50 border border-dark-green-mid rounded-lg px-4 py-2.5 text-off-white focus:outline-none focus:border-gold transition-colors"
+          >
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+          </select>
+
+          <button
+            onClick={handleSearch}
+            className="bg-gold text-dark-green-primary px-6 py-2.5 rounded-lg font-semibold hover:bg-gold/90 hover:scale-105 transition-all"
+          >
+            <Search className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 glass border-gold/30 text-gold px-6 py-2.5 rounded-lg font-semibold hover:border-gold/50 transition-all"
+          >
+            <LogOut className="w-5 h-5" />
+            <span className="hidden sm:inline">Logout</span>
+          </button>
+        </div>
+      </motion.div>
+
+      {/* Voices List */}
+      <div>
+        {isLoading ? (
+          <div className="text-center py-12">
+            <RefreshCw className="w-8 h-8 text-gold animate-spin mx-auto mb-4" />
+            <p className="text-soft-gray/80">Loading voices...</p>
+          </div>
+        ) : error ? (
+          <div className="glass-strong p-6 rounded-2xl border border-gold/10 text-center">
+            <p className="text-gold">{error}</p>
+          </div>
+        ) : voices.length === 0 ? (
+          <div className="glass-strong p-12 rounded-2xl border border-gold/10 text-center">
+            <p className="text-soft-gray/80 text-lg">No voices found</p>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {voices.map((voice) => (
+                <AdminVoiceCard
+                  key={voice.id}
+                  voice={voice}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onStatusChange={handleStatusChange}
+                />
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {pagination.totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-8">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-4 py-2 glass border-gold/30 text-gold rounded-lg font-semibold hover:border-gold/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <span className="text-soft-gray/80 px-4">
+                  Page {page} of {pagination.totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+                  disabled={!pagination.hasMore}
+                  className="px-4 py-2 glass border-gold/30 text-gold rounded-lg font-semibold hover:border-gold/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Password Change Section */}
+      <AdminPasswordCard />
+    </div>
+  );
+}
+

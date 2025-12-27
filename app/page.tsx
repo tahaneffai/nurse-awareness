@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { MessageSquare, Scale, Mail, ArrowRight, CheckCircle2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
@@ -26,24 +26,28 @@ export default function Home() {
     setFormData({ email: '', message: '' });
   };
 
-  // Mock data for anonymous posts
-  const mockAnonymousPosts = [
-    {
-      text: lang === 'de' 
-        ? 'Ich habe meine Ausbildung mit so viel Leidenschaft und Engagement begonnen. Der ständige Druck und die fehlende Unterstützung haben es jedoch schwierig gemacht, fortzufahren.'
-        : 'I started my training with so much passion and dedication. However, the constant pressure and lack of support have made it difficult to continue.',
-    },
-    {
-      text: lang === 'de'
-        ? 'Die Arbeitsbelastung ist unrealistisch. Lange Arbeitszeiten ohne angemessene Pausen beeinträchtigen nicht nur mein Lernen, sondern auch mein Wohlbefinden.'
-        : 'The workload expectations are unrealistic. Working long hours without proper breaks affects not just my learning but my wellbeing.',
-    },
-    {
-      text: lang === 'de'
-        ? 'Ich schätze die Möglichkeit, anonym zu teilen. Manchmal muss man sich äußern, hat aber Angst vor den Konsequenzen.'
-        : 'I appreciate the opportunity to share anonymously. Sometimes you need to speak up but fear the consequences.',
-    },
-  ];
+  // Fetch real voices for homepage preview
+  const [homepageVoices, setHomepageVoices] = useState<Array<{ message: string; createdAt: string }>>([]);
+  const [voicesLoading, setVoicesLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/voices?page=1&size=3&sort=newest')
+      .then((res) => res.json())
+      .then((data) => {
+        // API always returns 200, check items (new format) or voices (legacy)
+        if (data.items) {
+          setHomepageVoices(data.items);
+        } else if (data.voices) {
+          // Legacy format support
+          setHomepageVoices(data.voices);
+        }
+        setVoicesLoading(false);
+      })
+      .catch((err) => {
+        console.error('Error fetching voices:', err);
+        setVoicesLoading(false);
+      });
+  }, []);
 
   // Mock data for articles
   const mockArticles = [
@@ -99,7 +103,7 @@ export default function Home() {
   ];
 
   return (
-    <main className="min-h-screen relative">
+    <main className="min-h-screen relative z-10">
       <Navbar />
       <Hero />
 
@@ -234,21 +238,37 @@ export default function Home() {
 
             {/* Right: Message Bubbles */}
             <div className="relative space-y-4">
-              {mockAnonymousPosts.map((post, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 30, rotate: -2 }}
-                  whileInView={{ opacity: 1, y: 0, rotate: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  className="glass-strong p-6 rounded-2xl border border-gold/10 hover:border-gold/30 transition-all duration-300"
-                  style={{
-                    transform: `rotate(${index % 2 === 0 ? '-1deg' : '1deg'})`,
-                  }}
-                >
-                  <p className="text-soft-gray/90 text-sm leading-relaxed">{post.text}</p>
-                </motion.div>
-              ))}
+              {homepageVoices.length > 0 ? (
+                homepageVoices.map((voice, index) => (
+                  <motion.div
+                    key={voice.createdAt + index}
+                    initial={{ opacity: 0, y: 30, rotate: -2 }}
+                    whileInView={{ opacity: 1, y: 0, rotate: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6, delay: index * 0.1 }}
+                    className="glass-strong p-6 rounded-2xl border border-gold/10 hover:border-gold/30 transition-all duration-300"
+                    style={{
+                      transform: `rotate(${index % 2 === 0 ? '-1deg' : '1deg'})`,
+                    }}
+                  >
+                    <p className="text-soft-gray/90 text-sm leading-relaxed">
+                      {voice.message.length > 150 ? `${voice.message.substring(0, 150)}...` : voice.message}
+                    </p>
+                  </motion.div>
+                ))
+              ) : voicesLoading ? (
+                <div className="glass-strong p-6 rounded-2xl border border-gold/10 text-center">
+                  <p className="text-soft-gray/60 text-sm">
+                    {lang === 'de' ? 'Lade Stimmen...' : 'Loading voices...'}
+                  </p>
+                </div>
+              ) : (
+                <div className="glass-strong p-6 rounded-2xl border border-gold/10 text-center">
+                  <p className="text-soft-gray/60 text-sm">
+                    {lang === 'de' ? 'Noch keine Stimmen. Sei die erste, die sicher teilt.' : 'No voices yet. Be the first to share safely.'}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
           <div className="text-center mt-12">
