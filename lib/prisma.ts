@@ -16,8 +16,3 @@ if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 }
 
-// Verify Prisma client is initialized
-if (!prisma) {
-  throw new Error('PrismaClient failed to initialize');
-}
-

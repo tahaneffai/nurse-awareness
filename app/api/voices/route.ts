@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { safeDbQuery } from '@/lib/db-utils';
 
+export const dynamic = 'force-dynamic';
+
 // GET: Fetch paginated voices
 // NEVER returns 500 - always returns 200 with degraded flag if DB fails
 export async function GET(request: NextRequest) {
