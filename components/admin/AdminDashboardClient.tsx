@@ -53,7 +53,12 @@ export default function AdminDashboardClient() {
       }
 
       // API always returns 200, check ok flag
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        throw new Error('Invalid response from server');
+      }
       
       if (!response.ok || !data.ok) {
         throw new Error(data.error || 'Failed to fetch voices');
@@ -62,6 +67,8 @@ export default function AdminDashboardClient() {
       // Handle degraded state
       if (data.degraded) {
         setError('Database temporarily unavailable. Please try again later.');
+      } else {
+        setError(''); // Clear error if not degraded
       }
 
       setVoices(data.voices || []);
@@ -79,6 +86,7 @@ export default function AdminDashboardClient() {
 
   useEffect(() => {
     fetchVoices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, sort, status]);
 
   const handleSearch = () => {
