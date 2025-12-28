@@ -52,13 +52,24 @@ export default function AdminDashboardClient() {
         return;
       }
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch voices');
+      // API always returns 200, check ok flag
+      const data = await response.json();
+      
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || 'Failed to fetch voices');
       }
 
-      const data = await response.json();
-      setVoices(data.voices);
-      setPagination(data.pagination);
+      // Handle degraded state
+      if (data.degraded) {
+        setError('Database temporarily unavailable. Please try again later.');
+      }
+
+      setVoices(data.voices || []);
+      setPagination(data.pagination || {
+        total: 0,
+        totalPages: 0,
+        hasMore: false,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {

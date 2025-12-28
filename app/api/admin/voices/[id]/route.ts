@@ -120,24 +120,43 @@ export async function DELETE(
       );
     }
 
-    await prisma.anonymousVoice.delete({
-      where: { id: params.id },
-    });
+    // Use safeDbQuery for database operations
+    const deleteResult = await safeDbQuery(
+      () => prisma.anonymousVoice.delete({
+        where: { id: params.id },
+      }),
+      null as any
+    );
+
+    if (!deleteResult.ok) {
+      if (deleteResult.errorCode === 'P2025' || deleteResult.errorMessage?.includes('not found')) {
+        return NextResponse.json(
+          { error: 'Voice not found' },
+          { status: 404 }
+        );
+      }
+      
+      return NextResponse.json(
+        { 
+          error: 'Failed to delete voice',
+          degraded: true,
+          message: 'Database temporarily unavailable. Please try again later.',
+        },
+        { status: 200 }
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('Error deleting voice:', error);
-    
-    if (error?.code === 'P2025') {
-      return NextResponse.json(
-        { error: 'Voice not found' },
-        { status: 404 }
-      );
-    }
+    console.error('[DELETE /api/admin/voices/[id]] Unexpected error:', error);
     
     return NextResponse.json(
-      { error: 'Failed to delete voice' },
-      { status: 500 }
+      { 
+        error: 'Failed to delete voice',
+        degraded: true,
+        message: 'Temporary unavailable. Please try again later.',
+      },
+      { status: 200 }
     );
   }
 }
