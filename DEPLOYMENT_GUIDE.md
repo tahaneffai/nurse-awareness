@@ -16,7 +16,10 @@ Go to your Vercel project → Settings → Environment Variables and add:
 
 1. **DATABASE_URL**
    - Your PostgreSQL connection string
+   - **MUST start with `postgresql://` or `postgres://`**
    - Example: `postgresql://user:password@host:5432/database?sslmode=require`
+   - ⚠️ **Do NOT add quotes** - Vercel handles them automatically
+   - ⚠️ **See VERCEL_DATABASE_URL_FIX.md if you get protocol errors**
 
 2. **ADMIN_PASSWORD**
    - Admin login password
@@ -173,4 +176,5 @@ ADMIN_SESSION_SECRET=your-random-secret-32-chars-minimum
 ```
 
 That's it! Your app should be ready to deploy. 🚀
+
 
