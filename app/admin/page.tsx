@@ -9,7 +9,7 @@ export default async function AdminPage() {
   // Verify admin session - middleware handles the actual verification
   // This is just a fallback check
   const cookieStore = await cookies();
-  const token = cookieStore.get('admin_session')?.value;
+  const token = cookieStore.get('better-auth.session_token')?.value;
   
   if (!token) {
     redirect('/admin/login');

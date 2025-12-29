@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Search, LogOut, RefreshCw } from 'lucide-react';
 import AdminVoiceCard from './AdminVoiceCard';
 import AdminPasswordCard from './AdminPasswordCard';
+import { authClient } from '@/lib/auth-client';
 
 type VoiceStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -53,7 +54,6 @@ export default function AdminDashboardClient() {
         return;
       }
 
-      // API always returns 200, check ok flag and data structure
       let data: any;
       try {
         data = await response.json();
@@ -305,13 +305,15 @@ export default function AdminDashboardClient() {
     }
   };
 
-  const handleLogout = async () => {
-    fetch('/api/admin/logout', { method: 'POST' })
-      .then(() => {
-        router.push('/admin/login');
-        router.refresh();
-      });
-  };
+const handleLogout = async () => {
+try {
+		await authClient.signOut();
+		router.push('/admin/login');
+		router.refresh();
+	} catch (error) {
+		console.error('Logout failed:', error);
+	}
+};
 
   return (
     <div className="space-y-8">

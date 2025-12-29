@@ -3,13 +3,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Shield, Lock } from 'lucide-react';
+import { Shield, Lock , Mail} from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { authClient } from '@/lib/auth-client';
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -19,29 +21,22 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ password }),
-      });
+      const response = await authClient.signIn.email({
+        email ,
+        password
+      })
 
       let data;
       try {
-        data = await response.json();
+        data = await response;
       } catch (jsonError) {
         console.error('[Login] JSON parse error:', jsonError);
         throw new Error('Invalid response from server');
       }
 
-      console.log('[Login] Response status:', response.status);
-      console.log('[Login] Response data:', data);
-
-      if (!response.ok || !data.ok) {
+      if (!response) {
         const errorMsg = data.error?.message || data.error || 'Invalid credentials';
         console.error('[Login] Login failed:', errorMsg);
-        throw new Error(errorMsg);
       }
 
       console.log('[Login] Login successful, redirecting...');
@@ -78,6 +73,26 @@ export default function AdminLoginPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label htmlFor="email" className="block text-soft-gray/80 text-sm mb-2">
+                  Email <span className="text-gold">*</span>
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gold/60" />
+                  <input
+                    type="email"
+                    id="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setError('');
+                    }}
+                    required
+                    className="w-full bg-dark-green-3/50 border border-dark-green-mid rounded-lg pl-11 pr-4 py-3 text-off-white focus:outline-none focus:border-gold transition-colors"
+                    placeholder="Enter email"
+                  />
+                </div>
+              </div>
               <div>
                 <label htmlFor="password" className="block text-soft-gray/80 text-sm mb-2">
                   Password <span className="text-gold">*</span>

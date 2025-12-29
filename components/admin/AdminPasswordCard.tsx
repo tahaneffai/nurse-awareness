@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Lock, CheckCircle2, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { authClient } from '@/lib/auth-client';
 
 export default function AdminPasswordCard() {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -15,64 +16,59 @@ export default function AdminPasswordCard() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess(false);
+const handleSubmit = async (e: React.FormEvent) => {
+	e.preventDefault();
+	setError('');
+	setSuccess(false);
 
-    if (!currentPassword) {
-      setError('Current password is required');
-      return;
-    }
+	if (!currentPassword) {
+		setError('Current password is required');
+		return;
+	}
 
-    if (newPassword.length < 8) {
-      setError('New password must be at least 8 characters');
-      return;
-    }
+	if (newPassword.length < 8) {
+		setError('New password must be at least 8 characters');
+		return;
+	}
 
-    if (newPassword !== confirmPassword) {
-      setError('New passwords do not match');
-      return;
-    }
+	if (newPassword !== confirmPassword) {
+		setError('New passwords do not match');
+		return;
+	}
 
-    if (currentPassword === newPassword) {
-      setError('New password must be different from current password');
-      return;
-    }
+	if (currentPassword === newPassword) {
+		setError('New password must be different from current password');
+		return;
+	}
 
-    setIsSaving(true);
+	setIsSaving(true);
 
-    try {
-      const response = await fetch('/api/admin/password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          currentPassword,
-          newPassword,
-        }),
-      });
+	try {
+		const { data, error } = await authClient.changePassword({
+			newPassword: newPassword,
+			currentPassword: currentPassword,
+			revokeOtherSessions: true,
+		});
 
-      const data = await response.json();
+		if (error) {
+			setError(error.message || 'Failed to update password');
+			return;
+		}
 
-      if (!response.ok || !data.ok) {
-        const errorMessage = data.error?.message || 'Failed to update password';
-        throw new Error(errorMessage);
-      }
+		// Success case
+		setSuccess(true);
+		setCurrentPassword('');
+		setNewPassword('');
+		setConfirmPassword('');
 
-      setSuccess(true);
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+		setTimeout(() => setSuccess(false), 5000);
 
-      setTimeout(() => setSuccess(false), 5000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setIsSaving(false);
-    }
-  };
+	} catch (err) {
+		setError(err instanceof Error ? err.message : 'An error occurred');
+	} finally {
+		setIsSaving(false);
+	}
+};
 
   return (
     <motion.div

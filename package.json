@@ -12,6 +12,7 @@
   "dependencies": {
     "@prisma/client": "^5.19.1",
     "bcryptjs": "^2.4.3",
+    "better-auth": "^1.4.9",
     "framer-motion": "^11.0.5",
     "install": "^0.13.0",
     "lucide-react": "^0.344.0",

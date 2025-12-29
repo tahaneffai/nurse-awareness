@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifySession } from '@/lib/admin-auth';
+import { getSessionCookie } from "better-auth/cookies";
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     // Verify session
-    const isAuthenticated = await verifySession(request);
+    const isAuthenticated = await getSessionCookie(request);
     if (!isAuthenticated) {
       return NextResponse.json(
         { ok: false, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } },
