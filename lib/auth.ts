@@ -1,4 +1,4 @@
-import { betterAuth } from "better-auth";
+import { betterAuth, env } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { db } from "@/server/db";
 
@@ -13,6 +13,7 @@ export const auth = betterAuth({
 		expiresIn: 60 * 60 * 24 * 7, 
 		updateAge: 60 * 60 * 24 
     },
-    advanced: { disableOriginCheck: true }
+    advanced: { disableOriginCheck: true },
+    secret: env.BETTER_AUTH_SECRET,
 
 });
