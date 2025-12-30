@@ -11,7 +11,6 @@ export async function middleware(request: NextRequest) {
     const sessionCookie = getSessionCookie(request);
 
     if (!sessionCookie) {
-      console.log( "wa zbbbb", error)
       return NextResponse.redirect(new URL('/admin/login', request.url));
     }
   }

@@ -45,8 +45,8 @@ const handleSubmit = async (e: React.FormEvent) => {
 
 	try {
 		const { data, error } = await authClient.changePassword({
-			newPassword: newPassword,
-			currentPassword: currentPassword,
+			newPassword,
+			currentPassword,
 			revokeOtherSessions: true,
 		});
 
