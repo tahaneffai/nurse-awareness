@@ -31,7 +31,7 @@ export default function Home() {
   const [voicesLoading, setVoicesLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/comments?page=1&size=3')
+    fetch('/api/comments?page=1&size=12')
       .then(async (res) => {
         let data: any;
         try {
@@ -251,23 +251,45 @@ export default function Home() {
             {/* Right: Message Bubbles */}
             <div className="relative space-y-4">
               {homepageVoices.length > 0 ? (
-                homepageVoices.map((voice, index) => (
+                <>
+                  {/* Sort by newest first and display only first 3 */}
+                  {homepageVoices
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .slice(0, 3)
+                    .map((voice, index) => (
+                      <motion.div
+                        key={voice.createdAt + index}
+                        initial={{ opacity: 0, y: 30, rotate: -2 }}
+                        whileInView={{ opacity: 1, y: 0, rotate: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6, delay: index * 0.1 }}
+                        className="glass-strong p-6 rounded-2xl border border-gold/10 hover:border-gold/30 transition-all duration-300"
+                        style={{
+                          transform: `rotate(${index % 2 === 0 ? '-1deg' : '1deg'})`,
+                        }}
+                      >
+                        <p className="text-soft-gray/90 text-sm leading-relaxed">
+                          {voice.message.length > 150 ? `${voice.message.substring(0, 150)}...` : voice.message}
+                        </p>
+                      </motion.div>
+                    ))}
+                  {/* Link to full listing page */}
                   <motion.div
-                    key={voice.createdAt + index}
-                    initial={{ opacity: 0, y: 30, rotate: -2 }}
-                    whileInView={{ opacity: 1, y: 0, rotate: 0 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.6, delay: index * 0.1 }}
-                    className="glass-strong p-6 rounded-2xl border border-gold/10 hover:border-gold/30 transition-all duration-300"
-                    style={{
-                      transform: `rotate(${index % 2 === 0 ? '-1deg' : '1deg'})`,
-                    }}
+                    transition={{ duration: 0.4, delay: 0.3 }}
+                    className="pt-4"
                   >
-                    <p className="text-soft-gray/90 text-sm leading-relaxed">
-                      {voice.message.length > 150 ? `${voice.message.substring(0, 150)}...` : voice.message}
-                    </p>
+                    <Link
+                      href="/voices/list"
+                      className="inline-flex items-center gap-2 text-gold hover:text-gold/80 font-semibold text-sm transition-colors group"
+                    >
+                      <span>{lang === 'de' ? 'Alle anonymen Stimmen ansehen' : 'View all anonymous voices'}</span>
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </Link>
                   </motion.div>
-                ))
+                </>
               ) : voicesLoading ? (
                 <div className="glass-strong p-6 rounded-2xl border border-gold/10 text-center">
                   <p className="text-soft-gray/60 text-sm">

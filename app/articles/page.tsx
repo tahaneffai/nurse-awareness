@@ -7,10 +7,27 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import PageHero from '@/components/PageHero';
 import { useLanguage } from '@/components/LanguageProvider';
-import { BookOpen, ArrowRight } from 'lucide-react';
+import { BookOpen, ArrowRight, Shield, HeartPulse, Compass, Clipboard, Star } from 'lucide-react';
 
 export default function ArticlesPage() {
   const { t, lang } = useLanguage();
+
+  // Icon mapping function
+  const getCategoryIcon = (category: string) => {
+    const categoryLower = category.toLowerCase();
+    if (categoryLower === 'rechte' || categoryLower === 'rights') {
+      return Shield;
+    } else if (categoryLower === 'wohlbefinden' || categoryLower === 'wellness') {
+      return HeartPulse;
+    } else if (categoryLower === 'orientierung' || categoryLower === 'guidance') {
+      return Compass;
+    } else if (categoryLower === 'umgang' || categoryLower === 'management') {
+      return Clipboard;
+    } else if (categoryLower === 'selbstwert' || categoryLower === 'self-worth') {
+      return Star;
+    }
+    return BookOpen; // fallback
+  };
 
   const mockArticles = [
     {
@@ -102,7 +119,19 @@ export default function ArticlesPage() {
                 transition={{ duration: 0.6, delay: index * 0.1 }}
                 className="glass-strong p-6 rounded-2xl border border-gold/10 hover:border-gold/30 transition-all duration-300 hover:shadow-xl hover:-translate-y-2 group"
               >
-                <div className="mb-4">
+                <div className="mb-4 flex items-center gap-2">
+                  {(() => {
+                    const IconComponent = getCategoryIcon(article.category);
+                    return (
+                      <motion.div
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex-shrink-0"
+                      >
+                        <IconComponent className="w-5 h-5 text-gold/60 group-hover:text-gold/80 transition-colors duration-300" />
+                      </motion.div>
+                    );
+                  })()}
                   <span className="inline-block bg-gold/20 text-gold px-3 py-1 rounded-full text-xs font-semibold">
                     {article.category}
                   </span>

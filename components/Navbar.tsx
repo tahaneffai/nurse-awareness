@@ -14,7 +14,7 @@ export default function Navbar() {
     { name: t('nav.home'), href: '/' },
     { name: t('nav.about'), href: '/about' },
     { name: t('nav.rights'), href: '/rights' },
-    { name: t('nav.voices'), href: '/voices' },
+    { name: t('nav.voices'), href: '/voices/list' },
     { name: t('nav.articles'), href: '/articles' },
   ];
 

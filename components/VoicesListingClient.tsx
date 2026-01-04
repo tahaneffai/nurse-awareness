@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import VoiceCard from './VoiceCard';
 import VoiceSkeleton from './VoiceSkeleton';
-import { ArrowDown, AlertCircle, RefreshCw, MessageSquarePlus } from 'lucide-react';
+import VoicesToolbar from './VoicesToolbar';
+import { AlertCircle, RefreshCw, MessageSquarePlus } from 'lucide-react';
 import { useLanguage } from './LanguageProvider';
 
 interface Voice {
@@ -14,26 +15,52 @@ interface Voice {
   topicTags: string | null;
 }
 
-interface VoicesListProps {
-  initialVoices: Voice[];
-  initialPagination: {
-    page: number;
-    size: number;
-    total: number;
-    totalPages: number;
-    hasMore: boolean;
+interface VoicesListingClientProps {
+  initialData: {
+    voices: Voice[];
+    pagination: {
+      page: number;
+      size: number;
+      total: number;
+      totalPages: number;
+      hasMore: boolean;
+    };
   };
 }
 
-export default function VoicesList({ initialVoices, initialPagination }: VoicesListProps) {
-  const { t, lang } = useLanguage();
-  const [voices, setVoices] = useState<Voice[]>(initialVoices);
-  const [pagination, setPagination] = useState(initialPagination);
+export default function VoicesListingClient({ initialData }: VoicesListingClientProps) {
+  const { lang } = useLanguage();
+  const [allVoices, setAllVoices] = useState<Voice[]>(initialData.voices);
+  const [pagination, setPagination] = useState(initialData.pagination);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const [error, setError] = useState('');
-  const [useInfiniteScroll, setUseInfiniteScroll] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+  const [useInfiniteScroll] = useState(true);
   const observerTarget = useRef<HTMLDivElement>(null);
+
+  // Frontend filtering and sorting
+  const filteredAndSortedVoices = useMemo(() => {
+    let result = [...allVoices];
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter((voice) =>
+        voice.message.toLowerCase().includes(query)
+      );
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+    });
+
+    return result;
+  }, [allVoices, searchQuery, sortOrder]);
 
   const loadMore = useCallback(async () => {
     if (isLoading || !pagination.hasMore) return;
@@ -50,13 +77,12 @@ export default function VoicesList({ initialVoices, initialPagination }: VoicesL
       try {
         data = await response.json();
       } catch (jsonError) {
-        console.error('[VoicesList] JSON parse error:', jsonError);
+        console.error('[VoicesListing] JSON parse error:', jsonError);
         setError(lang === 'de' ? 'Fehler beim Laden.' : 'Error loading.');
         setPagination((prev) => ({ ...prev, hasMore: false }));
         return;
       }
-      
-      // Handle error response
+
       if (!data.ok) {
         const errorMsg = data.error?.message || data.error || (lang === 'de' ? 'Fehler beim Laden.' : 'Error loading.');
         setError(errorMsg);
@@ -64,10 +90,7 @@ export default function VoicesList({ initialVoices, initialPagination }: VoicesL
         return;
       }
 
-      // Extract items from response
       const items = data.data?.items || data.items || [];
-      
-      // Ensure items is an array and map safely
       const safeItems: Voice[] = Array.isArray(items)
         ? items.map((v: any) => ({
             id: String(v.id || ''),
@@ -78,7 +101,7 @@ export default function VoicesList({ initialVoices, initialPagination }: VoicesL
         : [];
 
       if (response.ok && safeItems.length > 0) {
-        setVoices((prev) => [...prev, ...safeItems]);
+        setAllVoices((prev) => [...prev, ...safeItems]);
         const paginationData = data.data || data;
         setPagination({
           page: Number(paginationData.page) || pagination.page + 1,
@@ -88,7 +111,6 @@ export default function VoicesList({ initialVoices, initialPagination }: VoicesL
           hasMore: Boolean(paginationData.hasMore) !== false && safeItems.length >= pagination.size,
         });
       } else {
-        // No more items
         setPagination((prev) => ({ ...prev, hasMore: false }));
       }
     } catch (err) {
@@ -134,22 +156,18 @@ export default function VoicesList({ initialVoices, initialPagination }: VoicesL
       try {
         data = await response.json();
       } catch (jsonError) {
-        console.error('[VoicesList] JSON parse error on refresh:', jsonError);
+        console.error('[VoicesListing] JSON parse error on refresh:', jsonError);
         setError(lang === 'de' ? 'Fehler beim Aktualisieren.' : 'Error refreshing.');
         return;
       }
-      
-      // Handle error response
+
       if (!data.ok) {
         const errorMsg = data.error?.message || data.error || (lang === 'de' ? 'Fehler beim Aktualisieren.' : 'Error refreshing.');
         setError(errorMsg);
         return;
       }
 
-      // Extract items from response
       const items = data.data?.items || data.items || [];
-      
-      // Ensure items is an array and map safely
       const safeItems: Voice[] = Array.isArray(items)
         ? items.map((v: any) => ({
             id: String(v.id || ''),
@@ -160,7 +178,7 @@ export default function VoicesList({ initialVoices, initialPagination }: VoicesL
         : [];
 
       if (response.ok) {
-        setVoices(safeItems);
+        setAllVoices(safeItems);
         const paginationData = data.data || data;
         setPagination({
           page: Number(paginationData.page) || 1,
@@ -169,7 +187,7 @@ export default function VoicesList({ initialVoices, initialPagination }: VoicesL
           totalPages: Number(paginationData.totalPages) || 0,
           hasMore: Boolean(paginationData.hasMore) !== false && safeItems.length >= (paginationData.size || 12),
         });
-        setError(''); // Clear error on successful refresh
+        setError('');
       }
     } catch (err) {
       console.error('Error refreshing voices:', err);
@@ -179,40 +197,41 @@ export default function VoicesList({ initialVoices, initialPagination }: VoicesL
     }
   };
 
-  const scrollToForm = () => {
-    const formElement = document.getElementById('voice-form');
-    if (formElement) {
-      formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
-
   // Empty state
-  if (!isInitialLoading && voices.length === 0 && !error) {
+  if (!isInitialLoading && filteredAndSortedVoices.length === 0 && !error && !searchQuery) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="glass-strong p-12 rounded-2xl border border-gold/10 text-center"
-      >
-        <MessageSquarePlus className="w-16 h-16 text-gold/60 mx-auto mb-4" />
-        <h3 className="text-xl font-bold text-gold mb-3">
-          {lang === 'de' ? 'Noch keine Stimmen' : 'No voices yet'}
-        </h3>
-        <p className="text-soft-gray/80 text-base mb-6">
-          {lang === 'de'
-            ? 'Sei die erste Person, die sicher ihre Erfahrungen teilt.'
-            : 'Be the first person to safely share your experiences.'}
-        </p>
-        <motion.button
-          onClick={scrollToForm}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="inline-flex items-center gap-2 bg-gold text-dark-green-primary px-6 py-3 rounded-lg font-semibold hover:bg-gold/90 transition-all duration-200 shadow-lg"
+      <div className="space-y-6">
+        <VoicesToolbar
+          onSearchChange={setSearchQuery}
+          onSortChange={setSortOrder}
+          totalVoices={0}
+          currentSort={sortOrder}
+        />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-strong p-12 rounded-2xl border border-gold/10 text-center"
         >
-          <MessageSquarePlus className="w-4 h-4" />
-          <span>{lang === 'de' ? 'Anonym teilen' : 'Share Anonymously'}</span>
-        </motion.button>
-      </motion.div>
+          <MessageSquarePlus className="w-16 h-16 text-gold/60 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-gold mb-3">
+            {lang === 'de' ? 'Noch keine Stimmen' : 'No voices yet'}
+          </h3>
+          <p className="text-soft-gray/80 text-base mb-6">
+            {lang === 'de'
+              ? 'Sei die erste Person, die sicher ihre Erfahrungen teilt.'
+              : 'Be the first person to safely share your experiences.'}
+          </p>
+          <motion.button
+            onClick={() => window.location.href = '/voices'}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="inline-flex items-center gap-2 bg-gold text-dark-green-primary px-6 py-3 rounded-lg font-semibold hover:bg-gold/90 transition-all duration-200 shadow-lg"
+          >
+            <MessageSquarePlus className="w-4 h-4" />
+            <span>{lang === 'de' ? 'Anonym teilen' : 'Share Anonymously'}</span>
+          </motion.button>
+        </motion.div>
+      </div>
     );
   }
 
@@ -221,6 +240,14 @@ export default function VoicesList({ initialVoices, initialPagination }: VoicesL
 
   return (
     <div className="space-y-6">
+      {/* Toolbar */}
+      <VoicesToolbar
+        onSearchChange={setSearchQuery}
+        onSortChange={setSortOrder}
+        totalVoices={filteredAndSortedVoices.length}
+        currentSort={sortOrder}
+      />
+
       {/* Error alert */}
       <AnimatePresence>
         {showError && (
@@ -253,80 +280,67 @@ export default function VoicesList({ initialVoices, initialPagination }: VoicesL
         </div>
       ) : (
         <>
-          {/* Voices grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <AnimatePresence mode="popLayout">
-              {voices.map((voice, index) => (
-                <VoiceCard
-                  key={voice.id}
-                  message={voice.message}
-                  createdAt={voice.createdAt}
-                  topicTags={voice.topicTags}
-                  index={index}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
-
-          {/* Loading more skeletons */}
-          {isLoading && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <VoiceSkeleton key={`loading-${i}`} index={i} />
-              ))}
-            </div>
-          )}
-
-          {/* Load more button (if infinite scroll disabled) */}
-          {!useInfiniteScroll && pagination.hasMore && (
-            <div className="text-center pt-4">
-              <motion.button
-                onClick={loadMore}
-                disabled={isLoading}
-                whileHover={{ scale: isLoading ? 1 : 1.05 }}
-                whileTap={{ scale: isLoading ? 1 : 0.95 }}
-                className="inline-flex items-center gap-2 bg-gold text-dark-green-primary px-8 py-3 rounded-lg font-semibold hover:bg-gold/90 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>{lang === 'de' ? 'Lädt...' : 'Loading...'}</span>
-                  </>
-                ) : (
-                  <>
-                    <span>{lang === 'de' ? 'Mehr laden' : 'Load More'}</span>
-                    <ArrowDown className="w-4 h-4" />
-                  </>
-                )}
-              </motion.button>
-              <p className="text-soft-gray/60 text-xs mt-2">
-                {lang === 'de'
-                  ? `Zeige ${voices.length} von ${pagination.total} Stimmen`
-                  : `Showing ${voices.length} of ${pagination.total} voices`}
-              </p>
-            </div>
-          )}
-
-          {/* Infinite scroll trigger */}
-          {useInfiniteScroll && pagination.hasMore && !isLoading && (
-            <div ref={observerTarget} className="h-20 flex items-center justify-center">
-              <div className="text-soft-gray/60 text-xs">
-                {lang === 'de' ? 'Scrollen zum Laden...' : 'Scroll to load more...'}
-              </div>
-            </div>
-          )}
-
-          {/* All loaded message */}
-          {!pagination.hasMore && voices.length > 0 && (
+          {/* No results for search */}
+          {searchQuery && filteredAndSortedVoices.length === 0 ? (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center text-soft-gray/60 text-sm py-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="glass-strong p-12 rounded-2xl border border-gold/10 text-center"
             >
-              {lang === 'de' 
-                ? `Alle ${pagination.total} Stimmen geladen.` 
-                : `All ${pagination.total} voices loaded.`}
+              <p className="text-soft-gray/80 text-base">
+                {lang === 'de'
+                  ? 'Keine Stimmen gefunden, die deiner Suche entsprechen.'
+                  : 'No voices found matching your search.'}
+              </p>
             </motion.div>
+          ) : (
+            <>
+              {/* Voices grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <AnimatePresence mode="popLayout">
+                  {filteredAndSortedVoices.map((voice, index) => (
+                    <VoiceCard
+                      key={voice.id}
+                      message={voice.message}
+                      createdAt={voice.createdAt}
+                      topicTags={voice.topicTags}
+                      index={index}
+                    />
+                  ))}
+                </AnimatePresence>
+              </div>
+
+              {/* Loading more skeletons */}
+              {isLoading && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <VoiceSkeleton key={`loading-${i}`} index={i} />
+                  ))}
+                </div>
+              )}
+
+              {/* Infinite scroll trigger */}
+              {useInfiniteScroll && pagination.hasMore && !isLoading && !searchQuery && (
+                <div ref={observerTarget} className="h-20 flex items-center justify-center">
+                  <div className="text-soft-gray/60 text-xs">
+                    {lang === 'de' ? 'Scrollen zum Laden...' : 'Scroll to load more...'}
+                  </div>
+                </div>
+              )}
+
+              {/* All loaded message */}
+              {!pagination.hasMore && filteredAndSortedVoices.length > 0 && !searchQuery && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center text-soft-gray/60 text-sm py-4"
+                >
+                  {lang === 'de'
+                    ? `Alle ${pagination.total} Stimmen geladen.`
+                    : `All ${pagination.total} voices loaded.`}
+                </motion.div>
+              )}
+            </>
           )}
         </>
       )}
